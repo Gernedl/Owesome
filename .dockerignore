@@ -1,0 +1,10 @@
+app/target/
+app/end2end/node_modules/
+app/end2end/playwright-report/
+app/end2end/test-results/
+.git/
+Dockerfile
+.dockerignore
+.env
+compose.yaml
+db/

@@ -1,0 +1,13 @@
+-- Runs once, when Postgres initializes an empty data volume (first
+-- `docker compose up`, or after `docker compose down -v`). Editing this
+-- file later has no effect on an existing database.
+--
+-- Executed as POSTGRES_USER against POSTGRES_DB. Files in db/init/ run in
+-- alphabetical order, so prefix new ones: 02_..., 03_...
+
+-- Example (replace with the real schema):
+-- CREATE TABLE users (
+--     id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+--     email      TEXT NOT NULL UNIQUE,
+--     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );

@@ -1,0 +1,21 @@
+// Project settings for Zed: https://zed.dev/docs/configuring-zed
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        // The crate is in app/, not in the project root.
+        "linkedProjects": ["app/Cargo.toml"],
+        // Analyse the server build, so optional deps and #[cfg(feature = "ssr")] code are visible.
+        "cargo": {
+          "features": ["ssr"]
+        },
+        // Let rust-analyzer see the bodies of #[server] functions (recommended by Leptos).
+        "procMacro": {
+          "ignored": {
+            "leptos_macro": ["server"]
+          }
+        }
+      }
+    }
+  }
+}

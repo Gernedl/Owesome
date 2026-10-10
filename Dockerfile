@@ -12,6 +12,10 @@ COPY app/ .
 
 RUN cargo leptos build --release -vv
 
+# CLI for registration codes. Same flags as cargo-leptos' server build, so the
+# compiled dependencies are reused.
+RUN cargo build --release --no-default-features --features ssr --bin regcode
+
 # ---- Runtime stage ----
 FROM debian:bookworm-slim AS runtime
 
@@ -22,6 +26,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/owesome /app/owesome
+COPY --from=builder /app/target/release/regcode /app/regcode
 COPY --from=builder /app/target/site /app/site
 COPY --from=builder /app/Cargo.toml /app/Cargo.toml
 

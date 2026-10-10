@@ -1,4 +1,10 @@
 pub mod app;
+pub mod auth;
+// Server-only: needs the HMAC key, so it must never end up in the WASM bundle.
+#[cfg(feature = "ssr")]
+pub mod registration;
+#[cfg(feature = "ssr")]
+pub mod session;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]

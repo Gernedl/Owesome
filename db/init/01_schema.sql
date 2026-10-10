@@ -1,13 +1,22 @@
--- Runs once, when Postgres initializes an empty data volume (first
--- `docker compose up`, or after `docker compose down -v`). Editing this
--- file later has no effect on an existing database.
---
--- Executed as POSTGRES_USER against POSTGRES_DB. Files in db/init/ run in
--- alphabetical order, so prefix new ones: 02_..., 03_...
+CREATE TABLE users (
+    id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL
+);
 
--- Example (replace with the real schema):
--- CREATE TABLE users (
---     id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
---     email      TEXT NOT NULL UNIQUE,
---     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
--- );
+CREATE TABLE tags (
+    id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE transactions (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    creditor_id BIGINT NOT NULL REFERENCES users (id),
+    debtor_id   BIGINT NOT NULL REFERENCES users (id),
+    tag_id      BIGINT REFERENCES tags (id) ON DELETE SET NULL,
+    CHECK (creditor_id <> debtor_id)
+);
+
+CREATE INDEX ON transactions (creditor_id);
+CREATE INDEX ON transactions (debtor_id);
+CREATE INDEX ON transactions (tag_id);

@@ -1,4 +1,34 @@
 services:
+  # Generates secrets into the `secrets` volume on first start, then exits.
+  # Existing files are never regenerated: Postgres only reads its password when
+  # db-data is first initialized, so a new one would lock the app out.
+  # `docker compose down -v` wipes both volumes, so they stay in sync.
+  # Files are world-readable, so no uids are needed.
+  secrets-init:
+    image: alpine:3
+    network_mode: none
+    volumes:
+      - secrets:/secrets
+    command:
+      - /bin/sh
+      - -euc
+      - |
+        # gen <file> <random bytes>
+        gen() {
+          f="/secrets/$$1"
+          if [ ! -s "$$f" ]; then
+            # Write to a temp file and rename, so a crash never leaves a partial secret.
+            head -c "$$2" /dev/urandom | od -An -v -tx1 | tr -d ' \n' > "$$f.tmp"
+            mv "$$f.tmp" "$$f"
+            echo "generated $$1"
+          fi
+          chmod 0444 "$$f"
+        }
+        gen postgres_password 32
+        # 64 bytes: the minimum for axum-extra's signed/private cookie `Key`.
+        gen hmac_key 64
+    restart: "no"
+
   app:
     build: .
     image: owesome
@@ -6,11 +36,20 @@ services:
       - "${APP_PORT:-8080}:8080"
     environment:
       RUST_LOG: ${RUST_LOG:-info}
-      DATABASE_URL: postgres://${POSTGRES_USER:-owesome}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-owesome}
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-owesome}
+      POSTGRES_DB: ${POSTGRES_DB:-owesome}
+      # Secrets are passed as file paths, never as values.
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      HMAC_KEY_FILE: /run/secrets/hmac_key
     networks:
       - default   # needed to publish the app's port
       - backend
+    volumes:
+      - secrets:/run/secrets:ro
     depends_on:
+      secrets-init:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
     restart: unless-stopped
@@ -19,20 +58,25 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-owesome}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: ${POSTGRES_DB:-owesome}
     # No published ports: only services on the backend network can reach it.
     networks:
       - backend
     volumes:
       - db-data:/var/lib/postgresql/data
+      - secrets:/run/secrets:ro
       # Schema scripts, run only when db-data is empty.
-      - ./db/init:/docker-entrypoint-initdb.d:ro
+      # `z` relabels the folder for SELinux so the container may read it.
+      - ./db/init:/docker-entrypoint-initdb.d:ro,z
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
+    depends_on:
+      secrets-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
 networks:
@@ -41,3 +85,4 @@ networks:
 
 volumes:
   db-data:
+  secrets:

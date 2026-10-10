@@ -6,15 +6,39 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+# The web server
+[[bin]]
+name = "owesome"
+path = "src/main.rs"
+
+# CLI that prints a registration code, run via its own container
+[[bin]]
+name = "regcode"
+path = "src/bin/regcode.rs"
+required-features = ["ssr"]
+
 [dependencies]
 leptos = { version = "0.8.0" }
 leptos_router = { version = "0.8.0" }
+leptos-use = { version = "0.19", default-features = false, features = ["use_clipboard"] }
 axum = { version = "0.8.0", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 leptos_axum = { version = "0.8.0", optional = true }
 leptos_meta = { version = "0.8.0" }
+serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
 wasm-bindgen = { version = "0.2.106", optional = true }
+axum-extra = { version = "0.12", features = ["cookie"], optional = true }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "migrate", "macros"], optional = true }
+dotenvy = { version = "0.15", optional = true }
+# Registration codes (src/registration.rs)
+hmac = { version = "0.13", optional = true }
+sha2 = { version = "0.11", optional = true }
+base64 = { version = "0.23", optional = true }
+hex = { version = "0.4", optional = true }
+rand = { version = "0.10", optional = true }
+# Password hashing
+argon2 = { version = "0.6", optional = true }
 
 [features]
 hydrate = [
@@ -29,6 +53,15 @@ ssr = [
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",
+    "leptos-use/ssr",
+    "dep:axum-extra",
+    "dep:sqlx",
+    "dep:hmac",
+    "dep:sha2",
+    "dep:base64",
+    "dep:hex",
+    "dep:rand",
+    "dep:argon2",
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
@@ -42,6 +75,10 @@ panic = "abort"
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
 output-name = "owesome"
+
+# The bin target cargo-leptos builds and runs as the server. Required once
+# there is more than one [[bin]].
+bin-target = "owesome"
 
 # The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
 site-root = "target/site"
